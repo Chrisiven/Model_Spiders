@@ -23,5 +23,5 @@ if __name__ == '__main__':
 
     S = Spider({"http":"http://127.0.0.1:1080"})
     S.put_urls(urls=["https://www.simply-hentai.com/original-work/nyotaika-cheat-ga-souzou-ijou-ni-bannou-sugita-sono-1-aa034"])
-    S.run()
+    
 
