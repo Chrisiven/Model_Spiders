@@ -19,7 +19,7 @@ class Model_Spider:
     def __init__(self,*,
                     thread_num:int=None, # 设置线程数量
                     proxy:dict=None, # 代理
-                    Semaphore_value:int=100, # 一次下载的数目
+                    Semaphore_value:int=20, # 一次下载的数目
                     timeout:int=60): #超时时间
 
         super(Model_Spider, self).__init__()
@@ -39,60 +39,54 @@ class Model_Spider:
         }
         self._proxy = proxy  #代理
         self._timeout = timeout #超时
-        self._QueueSize = 1000 #todo  默认队列的长度
         self._title = 'Model_Spider' #标题名称
-        self._DateQueue = LoopQueue(self._QueueSize)
-        self._queue = self._DateQueue._queue
-        self._url_list = ''
-        self._loop = asyncio.get_event_loop()
-        self._Semaphore = asyncio.Semaphore(Semaphore_value)
+        self._DateQueue = LoopQueue()
+        self._loop = asyncio.get_event_loop() # 事件循环
+        self._Semaphore = asyncio.Semaphore(Semaphore_value) #控制下载量
         self._file_path = os.getcwd() #当前文件
         self._folder_path = '' # 当前文件夹
         self._file_success = 0 #文件下载成功数
         self._file_fail = 0 #文件下载失败数量
-        self.session = requests.Session() #todo 默认开启session功能
-    def put_urls(self,urls:list): #todo 传递url
+        self.session = requests.Session()
+
+
+    def put_urls(self,urls:list):
         self._DateQueue.make(urls)
         print("传入成功,数量:{}".format(self._DateQueue._queue.qsize()))
-        self.run() # todo 启动整个程序
+        self.__Queueloop() #直接开启任务
 
 
-    def set_headers(self,header_items)->None: #todo 给用户调用,用于设置爬虫的headers
+    def set_headers(self,header_items)->None:
         for key,value in header_items.items():
             self._headers.setdefault(key,value)
             print("{} 设置成功!".format(key))
         print(self._headers)
 
 
-    def set_QueueSize(self,value): #todo 设置队列的大小
-        self._QueueSize = value
-
-    def __Queueloop(self): #todo 队列 不用管
-        if self._queue.qsize() <= 0:
-            print("队列空间不足,请使用 set_QueueSize() 设置队列大小")
-            return False
-        elif self._queue.qsize() > 5: #如果任务总数大于5,那么就开启多线程.
+    def __Queueloop(self):
+        # 控制队列里的任务
+        print("当前队列空间是:",self._DateQueue._queue.qsize())
+        if self._DateQueue._queue.qsize() > 5: # todo 判断如果任务总数大于5,那么就开启多线程.
             print("正在开启多线程模式:")
-            while self._queue.qsize() > 0:
+            while self._DateQueue._queue.qsize() > 0:
                 thread_list = []
                 print("当前线程数:",self._thread_num)
-                print("当前任务数:",self._queue.qsize())
+                print("当前任务数:",self._DateQueue._queue.qsize())
                 for i in range(0,self._thread_num):
-                    if self._queue.qsize() == 0:
+                    if self._DateQueue._queue.qsize() == 0:
                         break
-                    url = self._queue.get()
+                    url =self._DateQueue._queue.get()
                     thread = Thread(target=self.__get,args=(url,))
                     thread_list.append(thread)
                     thread.start()
                 for thread_join in thread_list:
                     thread_join.join()
                 time.sleep(self._DateQueue._time)
-        else:
-            while self._queue.qsize() > 0 :
-                url = self._queue.get()
+        else: #todo 否则 直接访问
+            while self._DateQueue._queue.qsize() >0 :
+                url = self._DateQueue._queue.get()
+                print("当前取得的url是:",url)
                 self.__get(url)
-
-
 
     def __get(self,url): #TODO get访问
 
@@ -152,7 +146,7 @@ class Model_Spider:
             self._folder_path = self.__mkdir(title)
             # self._DateQueue.make(items)#传入数据
             for name,url in items.items():
-                # name,url = self._queue.get_nowait()
+
                 print("正在获取:{}  {}".format(name,url))
                 task = self.__async_download(url,name,file_model)
                 task_list.append(task)
@@ -208,13 +202,12 @@ class Model_Spider:
                                                                     self._file_success,
                                                                     self._file_fail))
 
-    def run(self):#run!
-        self.__Queueloop()
+
 
 if __name__ == '__main__':
     my = Model_Spider()
-    # my.put_urls(['https://www.simply-hentai.com/original-work/nyotaika-cheat-ga-souzou-ijou-ni-bannou-sugita-sono-1-aa034/all-pages'])
-    # my.run()
+    my.put_urls(['1',"2"])
+
 
 """
 
@@ -227,7 +220,7 @@ if __name__ == '__main__':
                 self.downLoad_middleware() #直接调用,注意传参!
     
         model = Model_Spider()
-        model.put_urls(["url","url2"])
+        model.put_urls(["url","url2","url..."])
         model.run() #即可!
 
 
